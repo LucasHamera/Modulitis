@@ -1,26 +1,22 @@
 # Modulitis
 
-Modulitis jest zestawem narzędzi do tworzenia aplikacji modularnej, w której każdy moduł jest oddzielnym procesem. Dodatkowo pozwala na zarządzanie modułami w czasie działania programu.
+Modulitis is a set of tools for creating a modular application, where each module is a separated process. Additionally, it allows for managing modules while the program is running.
 
 ## Problem
 
-W architekturze monolitycznej, wszystkie komponenty systemu są ze sobą ściśle powiązane i działają jako jedna jednostka. W przypadku wystąpienia błędu krytycznego, może to prowadzić do awarii całego systemu, co jest poważnym problemem. Wykrycie i naprawa takiego błędu muszą nastąpić natychmiast, co może być trudne i czasochłonne.
+In a monolithic architecture, all system components are tightly linked together and work as a single unit. If a critical error occurs, it can lead to the failure of the entire system, which is a serious problem. Detection and repair of such an error must occur immediately, which can be difficult and time-consuming.
 
-Z drugiej strony, w architekturze mikroserwisów, każda usługa działa niezależnie. Oznacza to, że awaria jednej usługi nie wpływa na działanie innych. To sugeruje, że mikroserwisy mogą być bardziej odporne na błędy i łatwiejsze do zarządzania. Jednakże, taka architektura wiąże się z większą złożonością, zarówno pod względem implementacji, jak i zarządzania.
+In contrast, in microservices architecture, each service operates autonomously. This means that the failure of one service does not affect the operation of others. This suggests that microservices may be more fault-tolerant and easier to manage. However, such an architecture comes with greater complexity, both in terms of implementation and management.
 
-W ramach niniejszego repozytorium oferujemy rozwiązanie, które łączy zalety obu tych architektur. Mimo zastosowania architektury monolitycznej, umożliwia ono izolację awarii dzięki zastosowaniu wydzielonych modułów i procesów.
+Within this repository, we offer a solution that combines the advantages of both architectures. Although a monolithic architecture is used, it enables fault isolation through the use of separated modules and processes.
 
-Kluczowe korzyści z tego rozwiązania to:
-1. **Izolacja awarii**: Każdy moduł działa niezależnie, więc awaria jednego modułu nie wpływa na działanie innych.
-2. **Zarządzanie w czasie rzeczywistym**: Moduły mogą być monitorowane i zarządzane w czasie rzeczywistym, co umożliwia szybką reakcję na problemy.
-3. **Skalowalność**: Możliwość uruchomienia dodatkowych instancji wydzielonych modułów lub wielu instalacji procesów dla jednego modułu umożliwia skalowanie systemu w zależności od potrzeb.
-4. **Monitoring**: Każdy moduł może być monitorowany indywidualnie, co umożliwia precyzyjne śledzenie wydajności i identyfikację problemów.
-5. **Śledzenie zapytań**: Możliwość śledzenia przebiegu zapytań pomiędzy modułami umożliwia lepsze zrozumienie interakcji w systemie i identyfikację potencjalnych punktów zapalnych.
-6. **Odseparowanie kodu**: Każdy moduł ma swój własny, odseparowany kod, co ułatwia zarządzanie i utrzymanie kodu.
+The key benefits of this solution are:
+1. **Failure isolation**: Each module operates independently, so the failure of one module does not affect the operation of others.
+2. **Real-time management**: Modules can be managed (started, disabled, deleted, added) in real time, allowing for quick response to problems.
+3. **Scalability**: The ability to run additional instances of separated modules or multiple process installations for a single module allows the system to scale as needed.
+4. **Monitoring**: Each module can be monitored individually, allowing you to accurately track performance and identify problems.
+5. **Query Tracking**: The ability to track requests between modules enables a better understanding of system interactions and identification of potential trouble spots.
+6. **Code Separation**: Each module has its own isolated code, making it easier to manage and maintain the code.
 
-Dzięki temu rozwiązaniu, możliwe jest skuteczne zarządzanie błędami, a także optymalizacja i skalowanie systemu, bez konieczności rezygnacji z zalet płynących z architektury monolitycznej. Jest to innowacyjne podejście, które łączy zalety obu architektur, oferując jednocześnie nowe możliwości.
-
-## Uwagi
-
-Docelowo przetłumaczyć na angielski
+With this solution, it is possible to effectively manage bugs, as well as optimize and scale the system, without having to give up the benefits of a monolithic architecture. This is an innovation approach that combines the advantages of both architectures while offering new opportunities.
 
