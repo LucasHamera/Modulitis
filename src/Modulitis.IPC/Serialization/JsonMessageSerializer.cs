@@ -4,8 +4,9 @@ namespace Modulitis.IPC.Serialization;
 
 internal sealed class JsonMessageSerializer: IPayloadSerializer
 {
-    public byte[] Serialize<T>(T message)
+    public Task<byte[]> SerializeAsync<T>(T message, CancellationToken token)
     {
-        return JsonSerializer.SerializeToUtf8Bytes(message);
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(message);
+        return Task.FromResult(bytes);
     }
 }
