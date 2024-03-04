@@ -1,5 +1,13 @@
 # Modulitis
 
+---
+
+<div align="center">
+  <img src="docs/logo.jpeg" width="400" height="400">
+</div>
+
+---
+
 Modulitis is a set of tools for creating a modular application, where each module is a separated process. Additionally, it allows for managing modules while the program is running.
 
 ## Problem
@@ -19,4 +27,6 @@ The key benefits of this solution are:
 6. **Code Separation**: Each module has its own isolated code, making it easier to manage and maintain the code.
 
 With this solution, it is possible to effectively manage bugs, as well as optimize and scale the system, without having to give up the benefits of a monolithic architecture. This is an innovation approach that combines the advantages of both architectures while offering new opportunities.
+
+
 
