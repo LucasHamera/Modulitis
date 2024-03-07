@@ -3,6 +3,8 @@
 using System.IO.Pipes;
 using System.Security.Cryptography;
 using System.Runtime.InteropServices;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 const string pipeName = "test";
 await using var server = new NamedPipeServerStream(pipeName);
@@ -11,30 +13,111 @@ await client.ConnectAsync();
 
 await server.WaitForConnectionAsync();
 
-var message = new byte[] { 4, 3, 2, 1 };
+var typedMessage = new Message(Guid.Parse("F4692F36-E291-4108-B64C-3CE4D00AD5D6"), "test");
+var messageBytes = new byte[] { 123,34,73,100,34,58,34,102,52,54,57,50,102,51,54,45,101,50,57,49,45,52,49,48,56,45,98,54,52,99,45,51,99,101,52,100,48,48,97,100,53,100,54,34,44,34,84,101,120,116,34,58,34,116,101,115,116,34,125 };
 
-var hasher = new SH1Hasher();
+var hasher = new Sh1Hasher();
+var serializer = new JsonMessageSerializer();
 
-var writer = new MessageWriter(hasher);
-await writer.Write(client, message);
+await using var processClient = new ProcessClient(client);
+var messageSender = new MessageSender(serializer, hasher, processClient);
+await messageSender.SendAsync(typedMessage, new CancellationToken());
 
 var reader = new MessageReader(hasher);
 var receivedMessage = await reader.Read(server);
 
+var isSameSentAndReceived = messageBytes.SequenceEqual(receivedMessage.Payload);
+
 Console.ReadLine();
 
-interface IPayloadHasher
+class Message
+{
+    public Message(Guid id, string text)
+    {
+        Id = id;
+        Text = text;
+    }
+    public Guid Id { get; }
+    public string Text { get; }
+}
+
+interface IProcessClient: IAsyncDisposable
+{
+    Task SendAsync(byte[] bytes, CancellationToken token);
+}
+
+class ProcessClient : IProcessClient
+{
+    private readonly PipeStream _clientStream;
+
+    public ProcessClient(PipeStream clientStream)
+    {
+        ArgumentNullException.ThrowIfNull(clientStream);
+        _clientStream = clientStream;
+    }
+    
+    public async Task SendAsync(byte[] bytes, CancellationToken token)
+    {
+        await _clientStream.WriteAsync(bytes, token);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _clientStream.DisposeAsync();
+    }
+}
+
+interface IMessageDispatcher
+{
+    Task Dispatch<T>(T message);
+}
+
+interface IMessageSender
+{
+    Task SendAsync<T>(T message, CancellationToken token);
+}
+
+class MessageSender(IMessageSerializer _messageSerializer, IPayloadHasher _hasher, IProcessClient _client) : IMessageSender
+{
+    public async Task SendAsync<T>(T message, CancellationToken token)
+    {
+        var serializedMessage = _messageSerializer.Serialize(message);
+        var messageWriter = new MessageWriter(_hasher);
+        await messageWriter.Write(_client, serializedMessage, token);
+    }
+}
+
+interface IMessageSerializer
+{
+    byte[] Serialize<T>(T message);
+    T? Deserialize<T>(byte[] bytes);
+}
+
+class JsonMessageSerializer : IMessageSerializer
+{
+    public byte[] Serialize<T>(T message)
+    {
+        return JsonSerializer.SerializeToUtf8Bytes(message);
+    }
+
+    public T Deserialize<T>(byte[] bytes)
+    {
+        var deserialized = JsonSerializer.Deserialize<T>(bytes);
+        if (deserialized is null)
+            throw new Exception();
+        return deserialized;
+    }
+}
+
+interface IPayloadHasher: IDisposable
 {
     byte[] Hash(byte[] payload);
 }
 
-class SH1Hasher : IPayloadHasher, IDisposable
+class Sh1Hasher : IPayloadHasher
 {
-    private readonly SHA1 _hasher;
-    public SH1Hasher()
-    {
-        _hasher = SHA1.Create();
-    }
+    private readonly SHA1 _hasher = SHA1.Create();
+
     public byte[] Hash(byte[] payload)
     {
         return _hasher.ComputeHash(payload);
@@ -46,10 +129,8 @@ class SH1Hasher : IPayloadHasher, IDisposable
     }
 }
 
-class MessageReader(IPayloadHasher hasher)
+class MessageReader(IPayloadHasher _hasher)
 {
-    private readonly IPayloadHasher _hasher = hasher;
-
     public async Task<IPCMessage> Read(PipeStream stream)
     {
         var header = await ReadHeader(stream);
@@ -90,17 +171,15 @@ class MessageReader(IPayloadHasher hasher)
     }
 }
 
-class MessageWriter(IPayloadHasher hasher)
+class MessageWriter(IPayloadHasher _hasher)
 {
-    private readonly IPayloadHasher _hasher = hasher;
-    
-    public async Task Write(PipeStream stream, byte[] payload)
+    public async Task Write(IProcessClient client, byte[] payload, CancellationToken token)
     {
-        await WriteHeader(stream, payload);
-        await stream.WriteAsync(payload);
+        await WriteHeader(client, payload, token);
+        await client.SendAsync(payload, token);
     }
 
-    private async Task WriteHeader(PipeStream stream, byte[] payload)
+    private async Task WriteHeader(IProcessClient client, byte[] payload, CancellationToken token)
     {
         var header = new IPCMessageHeader
         {
@@ -112,7 +191,7 @@ class MessageWriter(IPayloadHasher hasher)
 
         var headers = new IPCMessageHeader[] { header };
         var buffer = MemoryMarshal.Cast<IPCMessageHeader, byte>(headers).ToArray();
-        await stream.WriteAsync(buffer);
+        await client.SendAsync(buffer, token);
     }
 
     private unsafe void ComputeHash(byte[] payload, ref IPCMessageHeader header)
@@ -130,11 +209,18 @@ enum Compression: byte
     None
 }
 
+enum MessageType : byte
+{
+    Data,
+    Ack
+}
+
 [StructLayout(LayoutKind.Sequential)]
 unsafe struct IPCMessageHeader
 {
     public Guid Id;
     public Compression Compression;
+    public MessageType Type;
     public int PayloadSize;
     public fixed byte PayloadHash[PayloadHashSize];
     public const int PayloadHashSize = 20;
