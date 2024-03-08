@@ -2,6 +2,8 @@
 
 ---
 
+[![100 - commitow](https://img.shields.io/badge/100-commitow-8CD08A?style=for-the-badge)](https://100commitow.pl)
+
 <div align="center">
   <img src="docs/logo.jpeg" width="400" height="400">
 </div>
