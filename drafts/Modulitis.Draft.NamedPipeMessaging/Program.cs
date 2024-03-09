@@ -17,7 +17,7 @@ var typedMessage = new Message(Guid.Parse("F4692F36-E291-4108-B64C-3CE4D00AD5D6"
 var messageBytes = new byte[] { 123,34,73,100,34,58,34,102,52,54,57,50,102,51,54,45,101,50,57,49,45,52,49,48,56,45,98,54,52,99,45,51,99,101,52,100,48,48,97,100,53,100,54,34,44,34,84,101,120,116,34,58,34,116,101,115,116,34,125 };
 
 var hasher = new Sh1Hasher();
-var serializer = new JsonMessageSerializer();
+var serializer = new JsonPayloadSerializer();
 
 await using var processClient = new ProcessClient(client);
 var messageSender = new MessageSender(serializer, hasher, processClient);
@@ -30,15 +30,15 @@ var isSameSentAndReceived = messageBytes.SequenceEqual(receivedMessage.Payload);
 
 Console.ReadLine();
 
-class Message
+interface IProcessServer
 {
-    public Message(Guid id, string text)
-    {
-        Id = id;
-        Text = text;
-    }
-    public Guid Id { get; }
-    public string Text { get; }
+    
+}
+
+class Message(Guid id, string text)
+{
+    public Guid Id { get; } = id;
+    public string Text { get; } = text;
 }
 
 interface IProcessClient: IAsyncDisposable
@@ -77,23 +77,23 @@ interface IMessageSender
     Task SendAsync<T>(T message, CancellationToken token);
 }
 
-class MessageSender(IMessageSerializer _messageSerializer, IPayloadHasher _hasher, IProcessClient _client) : IMessageSender
+class MessageSender(IPayloadSerializer _serializer, IPayloadHasher _hasher, IProcessClient _client) : IMessageSender
 {
     public async Task SendAsync<T>(T message, CancellationToken token)
     {
-        var serializedMessage = _messageSerializer.Serialize(message);
-        var messageWriter = new MessageWriter(_hasher);
-        await messageWriter.Write(_client, serializedMessage, token);
+        var messageWriter = new MessageWriter();
+        var payload = Payload.Create(message, _serializer, _hasher);
+        await messageWriter.Write(_client, payload, token);
     }
 }
 
-interface IMessageSerializer
+interface IPayloadSerializer
 {
     byte[] Serialize<T>(T message);
     T? Deserialize<T>(byte[] bytes);
 }
 
-class JsonMessageSerializer : IMessageSerializer
+class JsonPayloadSerializer : IPayloadSerializer
 {
     public byte[] Serialize<T>(T message)
     {
@@ -135,7 +135,7 @@ class MessageReader(IPayloadHasher _hasher)
     {
         var header = await ReadHeader(stream);
 
-        var buffer = new byte[header.PayloadSize];
+        var buffer = new byte[header.PayloadHeader.Size];
         var result = await stream.ReadAsync(buffer);
         if (result != buffer.Length)
             throw new Exception();
@@ -163,44 +163,33 @@ class MessageReader(IPayloadHasher _hasher)
     private unsafe bool CheckHash(in IPCMessageHeader header, byte[] payload)
     {
         var computedHash = _hasher.Hash(payload);
-        fixed (byte* fixedPayloadHash = header.PayloadHash)
+        fixed (byte* fixedPayloadHash = header.PayloadHeader.Hash)
         {
-            var payloadHash = new Span<byte>(fixedPayloadHash, IPCMessageHeader.PayloadHashSize);
+            var payloadHash = new Span<byte>(fixedPayloadHash, PayloadHeader.PayloadHashSize);
             return payloadHash.SequenceEqual(computedHash);
         }
     }
 }
 
-class MessageWriter(IPayloadHasher _hasher)
+class MessageWriter
 {
-    public async Task Write(IProcessClient client, byte[] payload, CancellationToken token)
+    public async Task Write(IProcessClient client, Payload payload, CancellationToken token)
     {
         await WriteHeader(client, payload, token);
-        await client.SendAsync(payload, token);
+        await client.SendAsync(payload.Data, token);
     }
 
-    private async Task WriteHeader(IProcessClient client, byte[] payload, CancellationToken token)
+    private async Task WriteHeader(IProcessClient client, Payload payload, CancellationToken token)
     {
         var header = new IPCMessageHeader
         {
             Id = Guid.NewGuid(),
-            PayloadSize = payload.Length
+            PayloadHeader = payload.Header
         };
-
-        ComputeHash(payload, ref header);
 
         var headers = new IPCMessageHeader[] { header };
         var buffer = MemoryMarshal.Cast<IPCMessageHeader, byte>(headers).ToArray();
         await client.SendAsync(buffer, token);
-    }
-
-    private unsafe void ComputeHash(byte[] payload, ref IPCMessageHeader header)
-    {
-        var computedHash = _hasher.Hash(payload);
-        fixed (byte* fixedPayloadHash = header.PayloadHash)
-        {
-            Marshal.Copy(computedHash,0, new IntPtr(fixedPayloadHash), computedHash.Length);
-        }
     }
 }
 
@@ -211,8 +200,84 @@ enum Compression: byte
 
 enum MessageType : byte
 {
-    Data,
+    Data
+}
+
+enum MessageFlag : byte
+{
+    None,
     Ack
+}
+
+[StructLayout(LayoutKind.Sequential)]
+unsafe struct PayloadHeader
+{
+    private const int MaxClassNameLength = 512;
+    public const int PayloadHashSize = 20;
+    
+    public int Size;
+    public fixed char Type[MaxClassNameLength];
+    public fixed byte Hash[PayloadHashSize];
+
+    public static PayloadHeader Create()
+        => new PayloadHeader();
+    
+    public void Write(ReadOnlySpan<char> type, byte[] data, IPayloadHasher hasher)
+    {
+        Clean();
+        
+        var computedHash = hasher.Hash(data);
+        
+        fixed (char* fixedPayloadTypeNamePtr = type)
+        fixed (char* fixedPayloadTypePtr = Type)
+        {
+            NativeMemory.Copy(fixedPayloadTypeNamePtr, fixedPayloadTypePtr, (uint)type.Length * sizeof(char));
+        }
+
+        fixed (byte* computedHashPtr = computedHash)
+        fixed (byte* fixedPayloadHashPtr = Hash)
+        {
+            NativeMemory.Copy(computedHashPtr, fixedPayloadHashPtr, PayloadHashSize);
+        }
+
+        Size = data.Length;
+    }
+    
+    public void Clean()
+    {
+        Size = 0;
+        fixed (char* fixedPayloadTypePtr = Type)
+        fixed (byte* fixedPayloadHashPtr = Hash)
+        {
+            NativeMemory.Fill(fixedPayloadTypePtr, MaxClassNameLength, 0);
+            NativeMemory.Fill(fixedPayloadHashPtr, PayloadHashSize, 0);
+        }
+    }
+}
+
+class Payload
+{
+    private Payload(byte[] data)
+    {
+        Data = data;
+    }
+
+    public PayloadHeader Header { get; private set; }
+    public byte[] Data { get; private set; }
+    
+    public static Payload Create<T>(T @object, IPayloadSerializer serializer, IPayloadHasher hasher)
+    {
+        var payloadTypeName = typeof(T).Name;
+        var serializedPayload = serializer.Serialize(@object);
+
+        var payload = new Payload(serializedPayload);
+
+        var header = PayloadHeader.Create();
+        header.Write(payloadTypeName, serializedPayload, hasher);
+        payload.Header = header;
+
+        return payload;
+    }
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -221,9 +286,8 @@ unsafe struct IPCMessageHeader
     public Guid Id;
     public Compression Compression;
     public MessageType Type;
-    public int PayloadSize;
-    public fixed byte PayloadHash[PayloadHashSize];
-    public const int PayloadHashSize = 20;
+    public MessageFlag Flag;
+    public PayloadHeader PayloadHeader;
     public static int Size => sizeof(IPCMessageHeader);
 }
 
