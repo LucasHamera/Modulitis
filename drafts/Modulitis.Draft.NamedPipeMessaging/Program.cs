@@ -135,6 +135,9 @@ class MessageReader(IPayloadHasher _hasher)
     {
         var header = await ReadHeader(stream);
 
+        if (header.IsAck)
+            return new IPCMessage(header);
+
         var buffer = new byte[header.PayloadHeader.Size];
         var result = await stream.ReadAsync(buffer);
         if (result != buffer.Length)
@@ -184,6 +187,9 @@ class MessageWriter
         var header = new IPCMessageHeader
         {
             Id = Guid.NewGuid(),
+            Type = MessageType.Data,
+            Flag = MessageFlag.None,
+            Compression = Compression.None,
             PayloadHeader = payload.Header
         };
 
@@ -289,15 +295,21 @@ unsafe struct IPCMessageHeader
     public MessageFlag Flag;
     public PayloadHeader PayloadHeader;
     public static int Size => sizeof(IPCMessageHeader);
+
+    public bool IsAck => Flag == MessageFlag.Ack;
 }
 
 class IPCMessage
 {
-    public IPCMessage(IPCMessageHeader type, byte[] payload)
+    public IPCMessage(IPCMessageHeader header)
     {
-        Type = type;
+        Header = header;
+    }
+    public IPCMessage(IPCMessageHeader header, byte[] payload)
+    {
+        Header = header;
         Payload = payload;
     }
-    public IPCMessageHeader Type { get; }
+    public IPCMessageHeader Header { get; }
     public byte[] Payload { get; }
 }
