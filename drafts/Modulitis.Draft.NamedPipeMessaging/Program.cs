@@ -44,6 +44,7 @@ class Message(Guid id, string text)
 interface IProcessClient: IAsyncDisposable
 {
     Task SendAsync(byte[] bytes, CancellationToken token);
+    Task<int> ReadAsync(byte[] bytes, CancellationToken token);
 }
 
 class ProcessClient : IProcessClient
@@ -59,6 +60,11 @@ class ProcessClient : IProcessClient
     public async Task SendAsync(byte[] bytes, CancellationToken token)
     {
         await _clientStream.WriteAsync(bytes, token);
+    }
+
+    public async Task<int> ReadAsync(byte[] bytes, CancellationToken token)
+    {
+        return await _clientStream.ReadAsync(bytes, token);
     }
 
     public async ValueTask DisposeAsync()
@@ -129,17 +135,45 @@ class Sh1Hasher : IPayloadHasher
     }
 }
 
+class ProcessTransmission<TMessage>
+{
+    private readonly IPayloadSerializer _serializer;
+    private readonly IPayloadHasher _hasher;
+    private readonly IProcessClient _client;
+
+    public ProcessTransmission(IPayloadSerializer serializer, IPayloadHasher hasher, IProcessClient client)
+    {
+        _serializer = serializer;
+        _hasher = hasher;
+        _client = client;
+    }
+
+    public async Task SendAsync(TMessage message, CancellationToken token)
+    {
+        var payload = Payload.Create(message, _serializer, _hasher);
+        
+        var messageWriter = new MessageWriter();
+        var messageReader = new MessageReader(_hasher);
+        
+        await messageWriter.Write(_client, payload, token);
+        var receivedMessage = await messageReader.Read(_client, token);
+
+        if (!receivedMessage.Header.IsAck)
+            throw new Exception();
+    }
+}
+
 class MessageReader(IPayloadHasher _hasher)
 {
-    public async Task<IPCMessage> Read(PipeStream stream)
+    public async Task<IPCMessage> Read(IProcessClient client, CancellationToken token)
     {
-        var header = await ReadHeader(stream);
+        var header = await ReadHeader(client, token);
 
         if (header.IsAck)
             return new IPCMessage(header);
 
         var buffer = new byte[header.PayloadHeader.Size];
-        var result = await stream.ReadAsync(buffer);
+        var result = await client.ReadAsync(buffer, token);
         if (result != buffer.Length)
             throw new Exception();
 
@@ -152,10 +186,10 @@ class MessageReader(IPayloadHasher _hasher)
         return new IPCMessage(header, buffer);
     }
 
-    private async Task<IPCMessageHeader> ReadHeader(PipeStream stream)
+    private async Task<IPCMessageHeader> ReadHeader(IProcessClient client, CancellationToken token)
     {
         var buffer = new byte[IPCMessageHeader.Size];
-        var result = await stream.ReadAsync(buffer);
+        var result = await client.ReadAsync(buffer, token);
         if (result != buffer.Length)
             throw new Exception();
                     
