@@ -18,6 +18,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Modulitis", "src\Modulitis\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Modulitis.Module", "src\Modulitis.Module\Modulitis.Module.csproj", "{9A352F3D-D28C-4A7D-87D2-A0A515EE8FE9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Modulitis.Module.Processed", "src\Modulitis.Module.Processed\Modulitis.Module.Processed.csproj", "{34076D33-F712-49E9-8EA1-DD596DFA652E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,6 +50,10 @@ Global
 		{9A352F3D-D28C-4A7D-87D2-A0A515EE8FE9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9A352F3D-D28C-4A7D-87D2-A0A515EE8FE9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9A352F3D-D28C-4A7D-87D2-A0A515EE8FE9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{34076D33-F712-49E9-8EA1-DD596DFA652E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34076D33-F712-49E9-8EA1-DD596DFA652E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34076D33-F712-49E9-8EA1-DD596DFA652E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34076D33-F712-49E9-8EA1-DD596DFA652E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{DE68C523-A2C7-4C18-8B06-DC35755C8777} = {CBB2FE9D-8D00-4EC5-88F9-A056F83C0E93}
@@ -56,5 +62,6 @@ Global
 		{FCE14DE7-C7DA-46DB-8218-E32A5F080FC5} = {976EF842-34AF-4749-AEE6-73B535DDF88C}
 		{802DB093-7DD0-4517-84C5-658D4FBE822D} = {CBB2FE9D-8D00-4EC5-88F9-A056F83C0E93}
 		{9A352F3D-D28C-4A7D-87D2-A0A515EE8FE9} = {CBB2FE9D-8D00-4EC5-88F9-A056F83C0E93}
+		{34076D33-F712-49E9-8EA1-DD596DFA652E} = {CBB2FE9D-8D00-4EC5-88F9-A056F83C0E93}
 	EndGlobalSection
 EndGlobal
