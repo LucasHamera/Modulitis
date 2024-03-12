@@ -33,12 +33,10 @@ public class ModularApplication
         var runningModules = new List<RunningModule>();
         foreach (var registration in moduleRegistrations)
         {
-            var runner = registration.Runner;
-            if (runner is null)
-                continue;
+            var runner = registration.Interface;
             
             await runner.RunAsync(registration.Definition);
-            var runningModule = new RunningModule(ModuleId.Create(), registration.Definition, registration.Sender);
+            var runningModule = new RunningModule(ModuleId.Create(), registration.Definition, registration.Interface);
             runningModules.Add(runningModule);
         }
         return runningModules;
