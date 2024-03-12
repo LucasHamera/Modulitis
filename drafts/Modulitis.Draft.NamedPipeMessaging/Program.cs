@@ -24,7 +24,7 @@ var messageSender = new MessageSender(serializer, hasher, processClient);
 await messageSender.SendAsync(typedMessage, new CancellationToken());
 
 var reader = new MessageReader(hasher);
-var receivedMessage = await reader.Read(server);
+var receivedMessage = await reader.Read(processClient, CancellationToken.None);
 
 var isSameSentAndReceived = messageBytes.SequenceEqual(receivedMessage.Payload);
 
@@ -338,7 +338,9 @@ class IPCMessage
     public IPCMessage(IPCMessageHeader header)
     {
         Header = header;
+        Payload = Array.Empty<byte>();
     }
+    
     public IPCMessage(IPCMessageHeader header, byte[] payload)
     {
         Header = header;
