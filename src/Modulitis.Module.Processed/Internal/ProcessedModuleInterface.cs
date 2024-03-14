@@ -1,15 +1,37 @@
-﻿using Modulitis.Module.Management;
+﻿using System.Diagnostics;
 
 namespace Modulitis.Module.Processed.Internal;
 
-internal class ProcessedModuleInterface : IProcessedModuleInterface
+internal sealed class ProcessedModuleInterface : IProcessedModuleInterface
 {
-    public Task RunAsync(ModuleDefinition moduleDefinition)
+    private const string PathToModuleProcessApp = "";
+    
+    private readonly Process _process= new Process
     {
-        throw new NotImplementedException();
+        StartInfo = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            Arguments = PathToModuleProcessApp,
+            UseShellExecute = true,
+            RedirectStandardOutput = false,
+            RedirectStandardError = false,
+            CreateNoWindow = true
+        }
+    };
+
+    private bool _isStarted = false;
+    
+    public ValueTask RunAsync(ModuleDefinition moduleDefinition)
+    {
+        var isStarted = _process.Start();
+        if (!isStarted)
+            throw new Exception();
+
+        _isStarted = isStarted;
+        return ValueTask.CompletedTask;
     }
 
-    public Task TurnOffAsync()
+    public ValueTask TurnOffAsync()
     {
         throw new NotImplementedException();
     }
