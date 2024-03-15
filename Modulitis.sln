@@ -22,6 +22,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Modulitis.Module.Processed"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Modulitis.Module.Processed.App", "src\Modulitis.Module.Processed.App\Modulitis.Module.Processed.App.csproj", "{58A5DBB8-ABB5-4CFA-BE67-14B257B75B49}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0F96694B-36E8-4B7F-83BC-487C45FC579F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
