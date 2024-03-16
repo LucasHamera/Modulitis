@@ -33,7 +33,7 @@ internal sealed class ProcessedModuleInterface : IProcessedModuleInterface
 
     public ValueTask TurnOffAsync()
     {
-        throw new NotImplementedException();
+        return ValueTask.CompletedTask;
     }
 
     public Task SendAsync<TRequest>(TRequest request, CancellationToken token = default)
