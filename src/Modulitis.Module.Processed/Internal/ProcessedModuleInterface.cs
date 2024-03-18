@@ -33,6 +33,11 @@ internal sealed class ProcessedModuleInterface : IProcessedModuleInterface
 
     public ValueTask TurnOffAsync()
     {
+        if (_isStarted)
+        {
+            // TODO Send command to process
+            _process.Dispose();
+        }
         return ValueTask.CompletedTask;
     }
 
