@@ -9,7 +9,13 @@ Parser
     
 static async Task Run(CommandOptions opts)
 {
-    //handle options
+    var builder = WebApplication.CreateBuilder();
+    builder.WebHost.ConfigureKestrel(
+        opts => opts.ListenNamedPipe("my-test-pipe"));
+    
+    var app = builder.Build();
+
+    await app.RunAsync();
 }
 
 static void HandleParseError(IEnumerable<Error> errs)
