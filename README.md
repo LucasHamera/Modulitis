@@ -34,7 +34,6 @@ With this solution, it is possible to effectively manage bugs, as well as optimi
 
 ## Samples
 
-
 ---
 
 ## Project scope
